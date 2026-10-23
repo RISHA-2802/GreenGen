@@ -1,0 +1,5 @@
+country,phase,action,suggested_owner,success_metric,timeframe
+India,1. Baseline,Validate emissions and energy data,Data / Sustainability team,Completeness and validation rate of required data,Month 1
+India,2. Assess,Identify major energy uses and efficiency opportunities,Energy / Operations team,Energy audit completed; opportunities documented,Months 1-2
+India,3. Pilot,Evaluate feasible efficiency and renewable-energy measures,Engineering / Sustainability team,Pilot results measured against a defined baseline,Months 2-4
+India,4. Monitor,Update emissions data and review progress,Data / Sustainability team,Regular reporting with documented measured changes,Quarterly

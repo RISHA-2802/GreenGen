@@ -1,0 +1,6 @@
+country,iso_code,forecast_year,model,predicted_co2,training_through,training_observations,features_used,actual_2025_co2_available
+India,IND,2025,Linear Regression,2240.089989062428,2024,156,"year,population",False
+India,IND,2025,Bayesian Ridge,2236.8346860311094,2024,156,"year,population",False
+India,IND,2025,Random Forest,2944.5046407528826,2024,156,"year,population",False
+India,IND,2025,XGBoost,2727.655029296875,2024,156,"year,population",False
+India,IND,2025,GPR,3142.790886377952,2024,156,"year,population",False

@@ -1,0 +1,2 @@
+country,scenario_year,reference_model,baseline_forecast_co2,energy_intervention_fraction,renewable_intervention_fraction,assumed_total_reduction_fraction,illustrative_reduction_amount,illustrative_scenario_emissions,optimization_method,solver_status,assumptions_are_illustrative
+India,2025,GPR,3142.790886377952,0.05,0.05,0.1,314.2790886377952,2828.511797740157,SciPy SLSQP,Optimization terminated successfully,True

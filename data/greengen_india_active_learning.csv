@@ -1,0 +1,12 @@
+country,year,population,population_source,predicted_co2,gpr_predictive_std,selection_method,observed_label_available,uncertainty_rank
+India,2035,1613601474.0847,Illustrative projection,3703.534871532749,196.05786080489307,Highest GPR predictive uncertainty,False,1
+India,2034,1597963194.5680065,Illustrative projection,3680.7216827346156,170.85702418186847,Highest GPR predictive uncertainty,False,2
+India,2033,1582476474.026791,Illustrative projection,3649.449175683657,147.73112950009923,Highest GPR predictive uncertainty,False,3
+India,2032,1567139843.621529,Illustrative projection,3610.0212282943935,126.73898591708308,Highest GPR predictive uncertainty,False,4
+India,2031,1551951848.7480102,Illustrative projection,3562.803426787417,107.93285137653983,Highest GPR predictive uncertainty,False,5
+India,2030,1536911048.899375,Illustrative projection,3508.2182039654185,91.36307910809002,Highest GPR predictive uncertainty,False,6
+India,2029,1522016017.5294902,Illustrative projection,3446.7392433384744,77.08146478274523,Highest GPR predictive uncertainty,False,7
+India,2028,1507265341.9176497,Illustrative projection,3378.885248473161,65.1390340253291,Highest GPR predictive uncertainty,False,8
+India,2027,1492657623.0345821,Illustrative projection,3305.213189389065,55.569876324848025,Highest GPR predictive uncertainty,False,9
+India,2026,1478191475.409761,Illustrative projection,3226.3111474108114,48.35059357889405,Highest GPR predictive uncertainty,False,10
+India,2025,1463865527.0,Dataset,3142.7908863779626,43.336924595548545,Highest GPR predictive uncertainty,False,11

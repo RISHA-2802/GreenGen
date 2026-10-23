@@ -1,0 +1,5 @@
+country,priority,recommendation,reason,evidence_type,estimated_reduction
+India,High,Improve energy efficiency,Evaluate energy-saving opportunities and measure their emissions impact.,General action; requires local validation,Not quantified
+India,High,Assess renewable electricity adoption,Evaluate feasible renewable energy options using site-specific energy data.,General action; requires local validation,Not quantified
+India,Medium,Improve emissions data coverage,Collect reliable sector-level energy and emissions data to strengthen forecasts.,Data-quality recommendation,Not quantified
+India,Medium,Track progress against a baseline,Compare future measured emissions with the chosen baseline and document changes.,Monitoring recommendation,Not quantified
