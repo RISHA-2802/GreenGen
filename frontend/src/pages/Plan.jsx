@@ -35,12 +35,14 @@ export default function Plan() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.detail || `${label} failed (${response.status})`);
+        throw new Error(
+          data.detail || `${label} failed (${response.status})`
+        );
       }
 
       setter(data);
     } catch (err) {
-      setError(err.message || `Could not generate ${label.toLowerCase()}.`);
+      setError(err.message || `Could not generate ${label}.`);
     } finally {
       setLoading("");
     }
@@ -97,12 +99,18 @@ export default function Plan() {
 
     if (typeof data === "object") {
       return (
-        <pre className="result-json">{JSON.stringify(data, null, 2)}</pre>
+        <pre className="result-json">
+          {JSON.stringify(data, null, 2)}
+        </pre>
       );
     }
 
     return <p>{String(data)}</p>;
   }
+
+  const actions = Array.isArray(actionPlan)
+    ? actionPlan
+    : actionPlan?.actions || actionPlan?.tasks || [];
 
   return (
     <div className="page">
@@ -111,8 +119,8 @@ export default function Plan() {
           <div className="eyebrow">SUSTAINABILITY ACTIONS</div>
           <h1>Recommendations, Plan & Report</h1>
           <p>
-            Generate sustainability recommendations, track actions, and
-            prepare a report.
+            Generate sustainability recommendations, track actions,
+            and prepare a report.
           </p>
         </div>
         <div className="heading-icon">
@@ -158,7 +166,7 @@ export default function Plan() {
           <div className="panel-heading">
             <div>
               <h2><Leaf size={19} /> Recommendations</h2>
-              <p>Generate data-informed sustainability suggestions.</p>
+              <p>Generate sustainability suggestions.</p>
             </div>
           </div>
 
@@ -173,21 +181,15 @@ export default function Plan() {
             }
             disabled={!!loading || !country.trim()}
           >
-            {loading === "recommendations" ? (
-              <><RefreshCw size={16} /> Generating...</>
-            ) : (
-              "Generate Recommendations"
-            )}
+            {loading === "recommendations"
+              ? "Generating..."
+              : "Generate Recommendations"}
           </button>
 
           <div className="plan-output">
-            {recommendations ? (
-              renderData(recommendations)
-            ) : (
-              <p className="muted">
-                Your generated recommendations will appear here.
-              </p>
-            )}
+            {recommendations
+              ? renderData(recommendations)
+              : <p className="muted">Recommendations will appear here.</p>}
           </div>
         </section>
 
@@ -210,11 +212,9 @@ export default function Plan() {
             }
             disabled={!!loading || !country.trim()}
           >
-            {loading === "action plan" ? (
-              <><RefreshCw size={16} /> Generating...</>
-            ) : (
-              "Generate Action Plan"
-            )}
+            {loading === "action plan"
+              ? "Generating..."
+              : "Generate Action Plan"}
           </button>
 
           <div className="plan-output">
@@ -223,11 +223,7 @@ export default function Plan() {
                 {renderData(actionPlan)}
                 <div className="status-tracker">
                   <h3>Action status tracker</h3>
-                  {(
-                    Array.isArray(actionPlan)
-                      ? actionPlan
-                      : actionPlan.actions || actionPlan.tasks || []
-                  ).map((item, index) => (
+                  {actions.map((item, index) => (
                     <label className="status-row" key={index}>
                       <span>
                         {typeof item === "string"
@@ -253,9 +249,7 @@ export default function Plan() {
                 </div>
               </>
             ) : (
-              <p className="muted">
-                Generate an action plan to track progress here.
-              </p>
+              <p className="muted">Your action plan will appear here.</p>
             )}
           </div>
         </section>
@@ -265,9 +259,7 @@ export default function Plan() {
         <div className="report-icon"><FileText size={24} /></div>
         <div className="report-copy">
           <h2>Sustainability Report</h2>
-          <p>
-            Generate a report from the connected GreenGen backend.
-          </p>
+          <p>Generate a report from the GreenGen backend.</p>
         </div>
         <button
           className="btn btn-primary"
