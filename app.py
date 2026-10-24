@@ -4,21 +4,28 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
+# --------------------------------------------------
+# GreenGen configuration
+# --------------------------------------------------
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
 st.set_page_config(
     page_title="GreenGen | Sustainability Intelligence",
     page_icon="🌱",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
+# --------------------------------------------------
+# Styling
+# --------------------------------------------------
 st.markdown("""
 <style>
 .stApp {
     background: linear-gradient(135deg, #f5faf6, #edf5ef);
 }
 [data-testid="stSidebar"] {
-    background: #103c2c;
+    background-color: #103c2c;
 }
 [data-testid="stSidebar"] * {
     color: white !important;
@@ -26,8 +33,8 @@ st.markdown("""
 [data-testid="stMetric"] {
     background: white;
     border: 1px solid #dce9df;
-    padding: 18px;
     border-radius: 14px;
+    padding: 18px;
 }
 h1, h2, h3 {
     color: #174b35;
@@ -35,15 +42,20 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-
+# --------------------------------------------------
+# Data loading
+# --------------------------------------------------
 @st.cache_data
 def load_csv(filename):
     path = os.path.join(DATA_DIR, filename)
-    if not os.path.exists(path):
+
+    if not os.path.isfile(path):
         return pd.DataFrame()
+
     try:
         return pd.read_csv(path)
-    except Exception:
+    except Exception as error:
+        st.warning(f"Could not read {filename}: {error}")
         return pd.DataFrame()
 
 
@@ -55,25 +67,39 @@ optimization = load_csv("greengen_india_optimization_scenario.csv")
 recommendations = load_csv("greengen_india_recommendations.csv")
 action_plan = load_csv("greengen_india_action_plan.csv")
 
-
-def show_table(df):
-    if df.empty:
-        st.warning("No data available. Check that the required CSV exists in data/.")
+# --------------------------------------------------
+# Helpers
+# --------------------------------------------------
+def show_table(data):
+    if data.empty:
+        st.warning(
+            "No data available. Check the CSV file in the repository's data folder."
+        )
     else:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(data, width="stretch", hide_index=True)
 
 
-def number(value, digits=2):
+def format_number(value, digits=2):
     try:
         if pd.isna(value):
             return "Unavailable"
         return f"{float(value):,.{digits}f}"
-    except (TypeError, ValueError):
+    except (ValueError, TypeError):
         return "Unavailable"
 
 
+def numeric_column(data, column):
+    if data.empty or column not in data.columns:
+        return pd.Series(dtype="float64")
+    return pd.to_numeric(data[column], errors="coerce")
+
+
+# --------------------------------------------------
+# Sidebar navigation
+# --------------------------------------------------
 st.sidebar.title("🌱 GreenGen")
 st.sidebar.caption("Sustainability Intelligence")
+
 page = st.sidebar.radio(
     "Navigate",
     [
@@ -83,183 +109,283 @@ page = st.sidebar.radio(
         "Optimization",
         "Recommendations",
         "Action Plan",
-        "Downloads"
-    ]
+        "Downloads",
+    ],
 )
+
+# --------------------------------------------------
+# Main header and deployment marker
+# --------------------------------------------------
+st.success("TEST VERSION — demo-improvement")
 
 st.title("GreenGen")
-st.caption("Carbon-emissions forecasting, uncertainty analysis and sustainability planning")
-st.info("Current demonstration scope: India. Emissions units must be confirmed from the source dataset.")
-
-gpr = (
-    forecast[forecast["model"].astype(str).str.upper().eq("GPR")]
-    if not forecast.empty and {"model", "predicted_co2"}.issubset(forecast.columns)
-    else pd.DataFrame()
+st.caption(
+    "Carbon-emissions forecasting, uncertainty analysis "
+    "and sustainability planning"
 )
-gpr_value = gpr["predicted_co2"].iloc[0] if not gpr.empty else None
+st.info(
+    "Current demonstration scope: India. "
+    "Confirm the source dataset's units before interpreting emissions values."
+)
 
+# --------------------------------------------------
+# Forecast summary
+# --------------------------------------------------
+gpr_value = None
+
+if (
+    not forecast.empty
+    and {"model", "predicted_co2"}.issubset(forecast.columns)
+):
+    gpr_rows = forecast[
+        forecast["model"].astype(str).str.upper().eq("GPR")
+    ]
+    if not gpr_rows.empty:
+        gpr_value = gpr_rows["predicted_co2"].iloc[0]
+
+backtest_years = (
+    backtest["year"].nunique()
+    if not backtest.empty and "year" in backtest.columns
+    else None
+)
+
+# ==================================================
+# DASHBOARD
+# ==================================================
 if page == "Dashboard":
     st.subheader("India Sustainability Overview")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Forecast year", "2025")
-    c2.metric("GPR forecast", number(gpr_value))
-    c3.metric(
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Forecast year", "2025")
+    col2.metric("GPR forecast", format_number(gpr_value))
+    col3.metric(
         "Backtest years",
-        str(backtest["year"].nunique())
-        if not backtest.empty and "year" in backtest.columns
-        else "Unavailable"
+        str(backtest_years) if backtest_years is not None else "Unavailable",
     )
 
     st.warning(
         "The 2025 value is a model prediction, not a verified observation. "
-        "Its physical unit has not yet been confirmed."
+        "The physical unit of the emissions data has not yet been confirmed."
     )
 
-    if not backtest.empty and {"year", "actual"}.issubset(backtest.columns):
-        st.subheader("Historical observations")
-        actual_data = backtest.dropna(subset=["year", "actual"])
-        if not actual_data.empty:
-            actual_by_year = actual_data.groupby("year", as_index=False)["actual"].mean()
+    # Historical observations
+    if {"year", "actual"}.issubset(backtest.columns):
+        st.subheader("Historical India Backtest")
+
+        chart_data = backtest[["year", "actual"]].copy()
+        chart_data["year"] = numeric_column(chart_data, "year")
+        chart_data["actual"] = numeric_column(chart_data, "actual")
+        chart_data = chart_data.dropna()
+
+        if not chart_data.empty:
+            yearly_data = (
+                chart_data.groupby("year", as_index=False)["actual"]
+                .mean()
+                .sort_values("year")
+            )
+
             fig = px.line(
-                actual_by_year,
+                yearly_data,
                 x="year",
                 y="actual",
                 markers=True,
-                title="Observed values by backtest year"
+                title="Observed values by backtest year",
+                template="plotly_white",
             )
             fig.update_layout(
-                template="plotly_white",
                 xaxis_title="Year",
-                yaxis_title="CO₂ value (unit unverified)"
+                yaxis_title="CO₂ value (unit unverified)",
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
+        else:
+            st.info("No valid historical observations are available.")
 
-    if not summary.empty and {"model", "MAE"}.issubset(summary.columns):
-        st.subheader("Model performance at a glance")
-        chart_data = summary.dropna(subset=["MAE"]).sort_values("MAE")
-        if not chart_data.empty:
+    # Model performance
+    if {"model", "MAE"}.issubset(summary.columns):
+        st.subheader("Model Performance")
+
+        model_data = summary.copy()
+        model_data["MAE"] = numeric_column(model_data, "MAE")
+        model_data = model_data.dropna(subset=["MAE"]).sort_values("MAE")
+
+        if not model_data.empty:
             fig = px.bar(
-                chart_data,
+                model_data,
                 x="model",
                 y="MAE",
-                title="Mean Absolute Error (lower is better)",
-                text_auto=".2f"
+                text="MAE",
+                title="Mean Absolute Error — lower is better",
+                template="plotly_white",
             )
-            fig.update_layout(template="plotly_white", xaxis_title="Model")
-            st.plotly_chart(fig, use_container_width=True)
+            fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+            fig.update_layout(yaxis_title="MAE")
+            st.plotly_chart(fig, width="stretch")
 
-    st.caption("Research prototype • Results depend on the supplied data and assumptions.")
+    st.caption(
+        "GreenGen is a research prototype. Forecasts and scenario outputs "
+        "depend on the available data and assumptions."
+    )
 
+# ==================================================
+# FORECAST & MODELS
+# ==================================================
 elif page == "Forecast & Models":
     st.subheader("Forecast and Model Comparison")
 
     if not forecast.empty:
+        st.markdown("### India 2025 Forecasts")
         show_table(forecast)
+
         if {"model", "predicted_co2"}.issubset(forecast.columns):
-            fig = px.bar(
-                forecast,
-                x="model",
-                y="predicted_co2",
-                title="India 2025 model predictions",
-                text_auto=".2f"
+            plot_data = forecast.copy()
+            plot_data["predicted_co2"] = numeric_column(
+                plot_data, "predicted_co2"
             )
-            fig.update_layout(
-                template="plotly_white",
-                yaxis_title="Predicted CO₂ value (unit unverified)"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            plot_data = plot_data.dropna(subset=["predicted_co2"])
+
+            if not plot_data.empty:
+                fig = px.bar(
+                    plot_data,
+                    x="model",
+                    y="predicted_co2",
+                    text="predicted_co2",
+                    title="Model predictions for 2025",
+                    template="plotly_white",
+                )
+                fig.update_traces(
+                    texttemplate="%{text:.2f}",
+                    textposition="outside",
+                )
+                fig.update_layout(
+                    yaxis_title="Predicted CO₂ value (unit unverified)"
+                )
+                st.plotly_chart(fig, width="stretch")
     else:
         st.warning("Forecast CSV is missing.")
 
-    st.subheader("Rolling Backtest Results")
+    st.markdown("### Rolling Backtest Model Comparison")
     show_table(summary)
 
-    if not summary.empty and {"model", "MAE"}.issubset(summary.columns):
-        fig = px.bar(
-            summary.sort_values("MAE"),
-            x="model",
-            y="MAE",
-            title="Model MAE comparison — lower is better",
-            text_auto=".2f"
-        )
-        fig.update_layout(template="plotly_white")
-        st.plotly_chart(fig, use_container_width=True)
+    if {"model", "MAE"}.issubset(summary.columns):
+        plot_data = summary.copy()
+        plot_data["MAE"] = numeric_column(plot_data, "MAE")
+        plot_data = plot_data.dropna(subset=["MAE"]).sort_values("MAE")
+
+        if not plot_data.empty:
+            fig = px.bar(
+                plot_data,
+                x="model",
+                y="MAE",
+                title="Model MAE — lower is better",
+                template="plotly_white",
+            )
+            st.plotly_chart(fig, width="stretch")
 
     with st.expander("View individual backtest predictions"):
         show_table(backtest)
 
+# ==================================================
+# ACTIVE LEARNING
+# ==================================================
 elif page == "Active Learning":
     st.subheader("Uncertainty-Based Candidate Ranking")
+
     st.write(
-        "This section ranks candidate future observations by model uncertainty. "
-        "It does not mean new real-world labels have already been collected."
+        "This page displays saved candidate rankings based on model uncertainty. "
+        "It does not imply that new real-world emissions labels have been collected."
     )
 
     if not active.empty:
         if "predictive_std" in active.columns:
-            chart_data = active.copy()
-            chart_data["predictive_std"] = pd.to_numeric(
-                chart_data["predictive_std"], errors="coerce"
+            plot_data = active.copy()
+            plot_data["predictive_std"] = numeric_column(
+                plot_data, "predictive_std"
             )
-            chart_data = chart_data.dropna(subset=["predictive_std"])
-            if not chart_data.empty:
-                x_col = "year" if "year" in chart_data.columns else chart_data.columns[0]
-                fig = px.bar(
-                    chart_data,
-                    x=x_col,
-                    y="predictive_std",
-                    title="Prediction uncertainty by candidate",
-                    template="plotly_white"
-                )
-                st.plotly_chart(fig, use_container_width=True)
+            plot_data = plot_data.dropna(subset=["predictive_std"])
+
+            if not plot_data.empty:
+                x_col = "year" if "year" in plot_data.columns else None
+
+                if x_col:
+                    fig = px.bar(
+                        plot_data,
+                        x=x_col,
+                        y="predictive_std",
+                        title="Prediction uncertainty by year",
+                        template="plotly_white",
+                    )
+                    st.plotly_chart(fig, width="stretch")
 
         show_table(active)
+
         st.caption(
             "Future population values may be illustrative projections. "
-            "Observed emissions labels are not available for these candidates."
+            "Uncertainty rankings should not be interpreted as verified future outcomes."
         )
     else:
         st.warning("Active Learning CSV is missing.")
 
+# ==================================================
+# OPTIMIZATION
+# ==================================================
 elif page == "Optimization":
     st.subheader("Scenario-Based Optimization")
+
     st.write(
-        "Explore the saved scenario and its assumed emissions reduction. "
-        "These results are illustrative, not verified real-world savings."
+        "Review the saved optimization scenario. Its reductions are illustrative "
+        "assumptions, not independently verified real-world emissions savings."
     )
 
     if not optimization.empty:
         show_table(optimization)
 
-        numeric_cols = optimization.select_dtypes(include="number").columns.tolist()
+        numeric_cols = optimization.select_dtypes(
+            include="number"
+        ).columns.tolist()
+
         if numeric_cols:
-            st.caption("Numeric values available in the saved scenario:")
+            st.markdown("### Numeric outputs")
             st.write(", ".join(numeric_cols))
     else:
         st.warning("Optimization CSV is missing.")
 
+# ==================================================
+# RECOMMENDATIONS
+# ==================================================
 elif page == "Recommendations":
     st.subheader("Sustainability Recommendations")
-    st.write("Review the recommendations generated by the current project pipeline.")
+
+    st.write(
+        "Review the recommendations saved by the current GreenGen data pipeline."
+    )
+
     show_table(recommendations)
 
     st.caption(
-        "Recommendations should be treated as planning suggestions unless "
-        "their benefits have been independently measured."
+        "Treat recommendations as planning suggestions unless their benefits "
+        "have been independently measured."
     )
 
+# ==================================================
+# ACTION PLAN
+# ==================================================
 elif page == "Action Plan":
     st.subheader("Sustainable Action Plan")
+
     show_table(action_plan)
 
     st.caption(
-        "The listed actions are proposed activities; completion and emissions "
-        "reductions should be verified separately."
+        "The listed actions are proposals. Track implementation and verify "
+        "any emissions reductions separately."
     )
 
+# ==================================================
+# DOWNLOADS
+# ==================================================
 elif page == "Downloads":
-    st.subheader("Download Project Results")
+    st.subheader("Download GreenGen Outputs")
+
     files = [
         "greengen_india_rolling_summary.csv",
         "greengen_india_rolling_backtest.csv",
@@ -271,18 +397,25 @@ elif page == "Downloads":
     ]
 
     for filename in files:
-        path = os.path.join(DATA_DIR, filename)
-        if os.path.exists(path):
-            with open(path, "rb") as file:
-                st.download_button(
-                    label=f"Download {filename}",
-                    data=file.read(),
-                    file_name=filename,
-                    mime="text/csv",
-                    key=filename
-                )
-        else:
-            st.caption(f"Not found: {filename}")
+        filepath = os.path.join(DATA_DIR, filename)
 
+        if os.path.isfile(filepath):
+            try:
+                with open(filepath, "rb") as file:
+                    st.download_button(
+                        label=f"Download {filename}",
+                        data=file.read(),
+                        file_name=filename,
+                        mime="text/csv",
+                        key=f"download_{filename}",
+                    )
+            except OSError as error:
+                st.error(f"Could not prepare {filename}: {error}")
+        else:
+            st.warning(f"File not found: {filename}")
+
+# --------------------------------------------------
+# Footer
+# --------------------------------------------------
 st.divider()
 st.caption("GreenGen • India-focused sustainability research prototype")
